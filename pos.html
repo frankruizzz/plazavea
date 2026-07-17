@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plaza Vea - Punto de Venta</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; height: 100vh; display: flex; flex-direction: column; }
+        .top-bar { background: #cc0000; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; flex-wrap: wrap; gap: 10px; }
+        .top-bar .user-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .top-bar img { height: 30px; }
+        .badge-caja { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-caja.abierta { background: #28a745; }
+        .badge-caja.cerrada { background: #6c757d; }
+        .btn-logout { background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 15px; border-radius: 8px; cursor: pointer; }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        .btn-caja { background: #ff6b00; color: white; border: none; padding: 6px 15px; border-radius: 8px; cursor: pointer; }
+        .btn-caja:hover { background: #e05f00; }
+        .btn-caja.cerrar { background: #dc3545; }
+        .btn-caja.cerrar:hover { background: #c82333; }
+        .pos-main { display: flex; flex: 1; overflow: hidden; }
+        .left-panel { flex: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
+        .search-area { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 15px; flex-shrink: 0; }
+        .search-area .input-group { display: flex; gap: 10px; }
+        .search-area .input-group input { flex: 1; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; }
+        .search-area .input-group input:focus { border-color: #cc0000; outline: none; }
+        .search-area .input-group button { padding: 12px 25px; background: #cc0000; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
+        .search-area .input-group button:hover { background: #a30000; }
+        .search-area .input-group button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .search-results { margin-top: 10px; max-height: 200px; overflow-y: auto; }
+        .search-results .result-item { padding: 10px 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        .search-results .result-item:hover { background: #e9ecef; }
+        .search-results .result-item .desc { font-size: 14px; }
+        .search-results .result-item .price { font-weight: 600; color: #cc0000; }
+        .cart-area { flex: 1; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: flex; flex-direction: column; overflow: hidden; }
+        .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
+        .cart-header .count { background: #cc0000; color: white; padding: 2px 12px; border-radius: 20px; font-size: 14px; font-weight: 600; }
+        .cart-items { flex: 1; overflow-y: auto; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .cart-item .info { flex: 1; }
+        .cart-item .info .desc { font-weight: 500; font-size: 14px; }
+        .cart-item .info .detail { font-size: 12px; color: #6c757d; }
+        .cart-item .actions { display: flex; align-items: center; gap: 8px; }
+        .cart-item .actions button { width: 26px; height: 26px; border: 1px solid #ddd; border-radius: 50%; background: white; cursor: pointer; font-weight: 600; }
+        .cart-item .actions button:hover { background: #cc0000; color: white; border-color: #cc0000; }
+        .cart-item .actions .qty { min-width: 20px; text-align: center; font-weight: 600; }
+        .cart-item .actions .price { font-weight: 600; color: #cc0000; min-width: 70px; text-align: right; }
+        .cart-item .actions .remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 18px; padding: 0 5px; }
+        .cart-item .actions .remove:hover { background: none; color: #c82333; }
+        .cart-total { border-top: 2px solid #e0e0e0; padding-top: 12px; flex-shrink: 0; }
+        .cart-total .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+        .cart-total .row.total { font-size: 20px; font-weight: 700; color: #cc0000; padding-top: 8px; border-top: 1px solid #e0e0e0; }
+        .right-panel { width: 300px; background: white; padding: 20px; border-left: 1px solid #e0e0e0; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+        .right-panel h3 { font-size: 16px; margin-bottom: 15px; color: #333; }
+        .payment-method { margin-bottom: 15px; }
+        .payment-method select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; }
+        .tipo-comprobante { margin-bottom: 15px; }
+        .tipo-comprobante select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; }
+        .btn-checkout { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: background 0.3s; }
+        .btn-checkout:hover:not(:disabled) { background: #218838; }
+        .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header .close { background: none; border: none; font-size: 28px; cursor: pointer; color: #999; }
+        .modal-header .close:hover { color: #333; }
+        .btn-primary { width: 100%; padding: 14px; background: #cc0000; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .btn-primary:hover { background: #a30000; }
+        .alert { padding: 10px 15px; border-radius: 8px; margin: 0 20px 0 20px; display: none; font-size: 14px; }
+        .alert-danger { background: #f8d7da; color: #721c24; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.6s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .oferta-badge { background: #ff6b00; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; margin-left: 8px; }
+        .empty-cart { text-align: center; color: #999; padding: 40px 0; }
+        .empty-cart i { font-size: 40px; opacity: 0.3; }
+        .empty-cart p { margin-top: 10px; }
+        .venta-success { text-align: center; padding: 20px; }
+        .venta-success .icon { font-size: 60px; color: #28a745; }
+        .venta-success h3 { margin: 10px 0; }
+        .venta-success p { color: #6c757d; }
+        .tab-reportes { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab-reportes button { padding: 8px 15px; border: 2px solid #ddd; border-radius: 8px; background: white; cursor: pointer; font-weight: 600; }
+        .tab-reportes button.active { background: #cc0000; color: white; border-color: #cc0000; }
+        .tab-reportes button:hover:not(.active) { background: #f0f0f0; }
+        .reporte-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .reporte-item:hover { background: #f8f9fa; }
+        .reporte-item:last-child { border-bottom: none; }
+        .cliente-doc-section { margin-bottom: 15px; }
+        .cliente-doc-section label { display: block; font-weight: 500; margin-bottom: 5px; font-size: 13px; color: #333; }
+        .cliente-doc-section .input-row { display: flex; gap: 8px; }
+        .cliente-doc-section .input-row input { flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; min-width: 0; }
+        .cliente-doc-section .input-row input:focus { border-color: #cc0000; outline: none; }
+        .cliente-doc-section .btn-buscar-cliente { padding: 10px 15px; background: #cc0000; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; flex-shrink: 0; }
+        .cliente-doc-section .btn-buscar-cliente:hover { background: #a30000; }
+        .cliente-doc-section .btn-buscar-cliente:disabled { opacity: 0.6; cursor: not-allowed; }
+        .cliente-resultado { margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+        .cliente-resultado.ok { color: #155724; background: #d4edda; }
+        .cliente-resultado.error { color: #721c24; background: #f8d7da; }
+        .cliente-registro-nuevo { margin-top: 8px; }
+        .cliente-registro-nuevo input { width: 100%; padding: 8px 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; margin-bottom: 6px; }
+        .cliente-registro-nuevo button { width: 100%; padding: 9px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .cliente-registro-nuevo button:hover { background: #218838; }
+        .promo-tag { display: block; font-size: 11px; color: #ff6b00; font-weight: 600; margin-top: 2px; }
+        .caja-info { font-size: 12px; }
+        @media (max-width: 768px) {
+            .pos-main { flex-direction: column; }
+            .right-panel { width: 100%; border-left: none; border-top: 1px solid #e0e0e0; max-height: 300px; }
+            .top-bar { padding: 10px; }
+            .top-bar .user-info { gap: 8px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="top-bar">
+    <div class="user-info">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Plaza_Vea_logo.svg/2560px-Plaza_Vea_logo.svg.png" alt="Plaza Vea">
+        <span id="userNombre"><i class="fas fa-user"></i> Cargando...</span>
+        <span id="cajaStatus" class="badge-caja cerrada">🔒 Caja Cerrada</span>
+        <span>📊 <span id="ventasHoy">0</span> ventas | 💰 <span id="totalHoy">S/ 0.00</span></span>
+        <span class="caja-info">🧾 Apertura: <span id="montoApertura">S/ 0.00</span> | 💵 En caja: <span id="montoCajaActual">S/ 0.00</span></span>
+    </div>
+    <div>
+        <button class="btn-caja" id="btnAbrirCaja"><i class="fas fa-cash-register"></i> Abrir Caja</button>
+        <button class="btn-caja cerrar" id="btnCerrarCaja" style="display:none;"><i class="fas fa-lock"></i> Cerrar Caja</button>
+        <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </div>
+</div>
+
+<!-- ===== ALERTAS ===== -->
+<div id="alertMessage" class="alert alert-danger"></div>
+
+<!-- ===== MAIN ===== -->
+<div class="pos-main">
+
+    <!-- ===== PANEL IZQUIERDO ===== -->
+    <div class="left-panel">
+        <!-- Búsqueda -->
+        <div class="search-area">
+            <div class="input-group">
+                <input type="text" id="codigoProducto" placeholder="📷 Código de barras o SKU" autofocus>
+                <button id="btnBuscar"><i class="fas fa-search"></i> Buscar</button>
+            </div>
+            <input type="text" id="buscarDescripcion" placeholder="🔍 Buscar por nombre..." style="width:100%;padding:10px 15px;border:2px solid #e0e0e0;border-radius:10px;font-size:14px;margin-top:8px;">
+            <div id="searchResults" class="search-results"></div>
+        </div>
+
+        <!-- Carrito -->
+        <div class="cart-area">
+            <div class="cart-header">
+                <h3><i class="fas fa-shopping-cart"></i> Carrito</h3>
+                <span class="count" id="cartCount">0</span>
+            </div>
+            <div id="cartItems" class="cart-items">
+                <div class="empty-cart">
+                    <i class="fas fa-shopping-cart"></i>
+                    <p>Carrito vacío</p>
+                </div>
+            </div>
+            <div class="cart-total">
+                <div class="row"><span>Subtotal</span><span id="subtotal">S/ 0.00</span></div>
+                <div class="row"><span>IGV (18%)</span><span id="igvTotal">S/ 0.00</span></div>
+                <div class="row total"><span>Total</span><span id="totalPagar">S/ 0.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PANEL DERECHO ===== -->
+    <div class="right-panel">
+        <div class="tab-reportes">
+            <button class="active" onclick="switchTab('venta')">💰 Venta</button>
+            <button onclick="switchTab('reporte')">📊 Reportes</button>
+        </div>
+        <div id="tabVenta">
+            <h3>💳 Finalizar Venta</h3>
+            <div class="tipo-comprobante">
+                <label>Tipo de Comprobante</label>
+                <select id="tipoComprobante">
+                    <option value="1">Boleta</option>
+                    <option value="2">Factura</option>
+                </select>
+            </div>
+
+            <!-- Solo visible cuando el comprobante es Boleta: elegir si se pide DNI o "Sin documento" -->
+            <div class="tipo-comprobante" id="boletaDocOpciones" style="display:none;">
+                <label>Identificación del Cliente</label>
+                <select id="boletaModoDoc">
+                    <option value="dni">Con DNI</option>
+                    <option value="sin_doc">Sin documento</option>
+                </select>
+            </div>
+
+            <!-- Campo de documento (DNI o RUC) + botón de búsqueda en BD -->
+            <div class="cliente-doc-section" id="clienteDocSection" style="display:none;">
+                <label id="clienteDocLabel">Número de Documento</label>
+                <div class="input-row">
+                    <input type="text" id="numeroDocumentoCliente" placeholder="Ingrese número" inputmode="numeric">
+                    <button type="button" class="btn-buscar-cliente" id="btnBuscarCliente"><i class="fas fa-search"></i></button>
+                </div>
+                <div id="clienteResultado"></div>
+                <div class="cliente-registro-nuevo" id="clienteRegistroNuevo" style="display:none;">
+                    <input type="text" id="nombreClienteNuevo" placeholder="Nombre completo / Razón Social">
+                    <button type="button" id="btnRegistrarCliente"><i class="fas fa-user-plus"></i> Registrar y usar este cliente</button>
+                </div>
+            </div>
+
+            <div class="payment-method">
+                <label>Método de Pago</label>
+                <select id="metodoPago">
+                    <option value="1">💵 Efectivo</option>
+                    <option value="2">💳 Tarjeta Crédito/Débito</option>
+                    <option value="3">📱 SIP (Agora/Oh!)</option>
+                </select>
+            </div>
+            <div style="background:#f0f2f5;padding:15px;border-radius:12px;margin:10px 0;">
+                <div style="display:flex;justify-content:space-between;font-size:14px;">
+                    <span>Total a pagar</span>
+                    <span style="font-weight:700;font-size:20px;color:#cc0000;" id="totalPagarResumen">S/ 0.00</span>
+                </div>
+            </div>
+            <button class="btn-checkout" id="btnCheckout" disabled>
+                <i class="fas fa-check-circle"></i> Cobrar S/ 0.00
+            </button>
+        </div>
+        <div id="tabReporte" style="display:none;">
+            <h3>📊 Reportes</h3>
+            <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn-caja" onclick="cargarReporte('dia')" style="font-size:12px;padding:4px 12px;">📅 Hoy</button>
+                <button class="btn-caja" onclick="cargarReporte('semana')" style="font-size:12px;padding:4px 12px;">📅 Esta Semana</button>
+                <button class="btn-caja" onclick="cargarReporte('mes')" style="font-size:12px;padding:4px 12px;">📅 Este Mes</button>
+            </div>
+            <div id="reporteContent" style="max-height:400px;overflow-y:auto;">
+                <p style="color:#999;text-align:center;padding:20px;">Selecciona un período para ver el reporte</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODALES ===== -->
+<div class="modal" id="modalCaja">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalCajaTitle">Abrir Caja</h3>
+            <button class="close" onclick="document.getElementById('modalCaja').classList.remove('show')">&times;</button>
+        </div>
+        <div id="modalCajaBody">
+            <div style="margin-bottom:15px;">
+                <label style="display:block;font-weight:500;margin-bottom:5px;">Monto Inicial</label>
+                <input type="number" id="montoCaja" step="0.01" min="0" placeholder="Ingrese el monto" value="0" style="width:100%;padding:12px 15px;border:2px solid #e0e0e0;border-radius:10px;font-size:15px;">
+            </div>
+            <button class="btn-primary" onclick="abrirCaja()"><i class="fas fa-cash-register"></i> Abrir Caja</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalVenta">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>✅ Venta Completada</h3>
+            <button class="close" onclick="document.getElementById('modalVenta').classList.remove('show')">&times;</button>
+        </div>
+        <div id="modalVentaBody" class="venta-success">
+            <div class="icon">✅</div>
+            <h3>¡Venta Exitosa!</h3>
+            <p id="ventaInfo"></p>
+            <button class="btn-primary" id="btnImprimirPDF" style="margin-top:15px;">
+                <i class="fas fa-file-pdf"></i> Imprimir Comprobante (PDF)
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="modalDetalle">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>📄 Detalle de Venta</h3>
+            <button class="close" onclick="document.getElementById('modalDetalle').classList.remove('show')">&times;</button>
+        </div>
+        <div id="modalDetalleBody"></div>
+    </div>
+</div>
+
+<script>
+// =====================================================
+// ===== VARIABLES GLOBALES =====
+// =====================================================
+let carrito = [];
+let cajaAbierta = false;
+let cajaId = null;
+let userData = null;
+let clienteSeleccionado = null;   // { id_cliente, nombre_completo, ... }
+let promocionesActivas = [];      // promociones vigentes cargadas desde la BD
+let ultimaVentaId = null;         // id de la última venta procesada (para el PDF)
+
+// =====================================================
+// ===== DOM REFS =====
+// =====================================================
+const codigoInput = document.getElementById('codigoProducto');
+const btnBuscar = document.getElementById('btnBuscar');
+const searchResults = document.getElementById('searchResults');
+const descInput = document.getElementById('buscarDescripcion');
+const cartItems = document.getElementById('cartItems');
+const cartCount = document.getElementById('cartCount');
+const subtotalEl = document.getElementById('subtotal');
+const igvTotalEl = document.getElementById('igvTotal');
+const totalPagarEl = document.getElementById('totalPagar');
+const totalPagarResumen = document.getElementById('totalPagarResumen');
+const btnCheckout = document.getElementById('btnCheckout');
+const alertMessage = document.getElementById('alertMessage');
+const cajaStatus = document.getElementById('cajaStatus');
+const userNombre = document.getElementById('userNombre');
+const tipoComprobanteSelect = document.getElementById('tipoComprobante');
+const metodoPagoSelect = document.getElementById('metodoPago');
+const boletaDocOpciones = document.getElementById('boletaDocOpciones');
+const boletaModoDocSelect = document.getElementById('boletaModoDoc');
+const clienteDocSection = document.getElementById('clienteDocSection');
+const clienteDocLabel = document.getElementById('clienteDocLabel');
+const numeroDocumentoClienteInput = document.getElementById('numeroDocumentoCliente');
+const btnBuscarCliente = document.getElementById('btnBuscarCliente');
+const clienteResultadoEl = document.getElementById('clienteResultado');
+const clienteRegistroNuevoDiv = document.getElementById('clienteRegistroNuevo');
+const nombreClienteNuevoInput = document.getElementById('nombreClienteNuevo');
+const btnRegistrarCliente = document.getElementById('btnRegistrarCliente');
+const montoAperturaEl = document.getElementById('montoApertura');
+const montoCajaActualEl = document.getElementById('montoCajaActual');
+
+// =====================================================
+// ===== BUSCAR PRODUCTO POR CÓDIGO =====
+// =====================================================
+async function buscarProducto(codigo) {
+    console.log('🔍 Buscando producto:', codigo);
+    
+    if (!codigo) {
+        mostrarAlerta('Ingrese un código de producto', 'danger');
+        return;
+    }
+
+    btnBuscar.disabled = true;
+    btnBuscar.innerHTML = '<span class="spinner"></span>';
+
+    try {
+        const response = await fetch('api/productos.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'codigo=' + encodeURIComponent(codigo)
+        });
+        
+        const data = await response.json();
+        console.log('📦 Datos recibidos:', data);
+
+        if (data.success) {
+            reproducirSonidoEscaneo();
+            agregarAlCarrito(data);
+            codigoInput.value = '';
+            codigoInput.focus();
+            mostrarAlerta('✅ ' + data.descripcion + ' agregado', 'success');
+        } else {
+            mostrarAlerta(data.error || 'Producto no encontrado', 'danger');
+        }
+    } catch (error) {
+        console.error('❌ Error:', error);
+        mostrarAlerta('Error al buscar producto', 'danger');
+    } finally {
+        btnBuscar.disabled = false;
+        btnBuscar.innerHTML = '<i class="fas fa-search"></i> Buscar';
+    }
+}
+
+// =====================================================
+// ===== BUSCAR POR DESCRIPCIÓN (CORREGIDA) =====
+// =====================================================
+async function buscarPorDescripcion(texto) {
+    console.log('🔍 Buscando por descripción:', texto);
+    
+    if (texto.length < 2) {
+        searchResults.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await fetch(`api/productos.php?descripcion=${encodeURIComponent(texto)}`);
+        const productos = await response.json();
+        console.log('📦 Productos encontrados:', productos);
+
+        // Verificar si es un array (resultados de búsqueda por descripción)
+        if (Array.isArray(productos) && productos.length > 0) {
+            searchResults.innerHTML = productos.map(p => `
+                <div class="result-item" data-producto='${JSON.stringify(p)}'>
+                    <span class="desc">${p.descripcion}</span>
+                    <span class="price">S/ ${p.precio.toFixed(2)}</span>
+                </div>
+            `).join('');
+
+            searchResults.querySelectorAll('.result-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const producto = JSON.parse(this.dataset.producto);
+                    agregarAlCarrito(producto);
+                    searchResults.innerHTML = '';
+                    descInput.value = '';
+                });
+            });
+        } else {
+            searchResults.innerHTML = '<div style="padding:8px;color:#999;text-align:center;">No se encontraron productos</div>';
+        }
+    } catch (error) {
+        console.error('❌ Error en búsqueda por descripción:', error);
+        searchResults.innerHTML = '<div style="padding:8px;color:#dc3545;text-align:center;">Error al buscar</div>';
+    }
+}
+
+// =====================================================
+// ===== IDENTIFICACIÓN DEL CLIENTE (DNI / RUC) =====
+// =====================================================
+// Muestra u oculta los campos según el tipo de comprobante elegido:
+// Boleta -> permite "Con DNI" o "Sin documento"
+// Factura -> siempre pide RUC
+function actualizarSeccionCliente() {
+    const tipo = tipoComprobanteSelect.value; // '1' = Boleta, '2' = Factura
+
+    clienteResultadoEl.innerHTML = '';
+    clienteResultadoEl.className = 'cliente-resultado';
+    clienteRegistroNuevoDiv.style.display = 'none';
+    numeroDocumentoClienteInput.value = '';
+    nombreClienteNuevoInput.value = '';
+
+    if (tipo === '1') {
+        // ===== BOLETA =====
+        boletaDocOpciones.style.display = 'block';
+        const modo = boletaModoDocSelect.value;
+
+        if (modo === 'dni') {
+            clienteDocSection.style.display = 'block';
+            clienteDocLabel.textContent = 'DNI del Cliente';
+            numeroDocumentoClienteInput.placeholder = 'Ingrese 8 dígitos';
+            numeroDocumentoClienteInput.maxLength = 8;
+            clienteSeleccionado = null; // debe buscar antes de cobrar
+        } else {
+            // Sin documento: no se muestra ningún campo adicional
+            clienteDocSection.style.display = 'none';
+            clienteSeleccionado = { id_cliente: 1, nombre_completo: 'Público General' };
+        }
+    } else {
+        // ===== FACTURA (siempre requiere RUC) =====
+        boletaDocOpciones.style.display = 'none';
+        clienteDocSection.style.display = 'block';
+        clienteDocLabel.textContent = 'RUC de la Empresa';
+        numeroDocumentoClienteInput.placeholder = 'Ingrese 11 dígitos';
+        numeroDocumentoClienteInput.maxLength = 11;
+        clienteSeleccionado = null; // debe buscar antes de facturar
+    }
+}
+
+async function buscarCliente() {
+    const tipo = tipoComprobanteSelect.value;
+    const numero = numeroDocumentoClienteInput.value.trim();
+    const id_tipo_documento = tipo === '2' ? 2 : 1; // 2 = RUC, 1 = DNI
+
+    if (!numero) {
+        mostrarAlerta('Ingrese un número de documento', 'danger');
+        return;
+    }
+
+    btnBuscarCliente.disabled = true;
+    btnBuscarCliente.innerHTML = '<span class="spinner"></span>';
+
+    try {
+        const response = await fetch('api/clientes.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'buscar', id_tipo_documento, numero_documento: numero })
+        });
+        const data = await response.json();
+
+        if (data.success && data.encontrado) {
+            clienteSeleccionado = data.cliente;
+            clienteResultadoEl.className = 'cliente-resultado ok';
+            clienteResultadoEl.innerHTML = `${data.cliente.nombre_completo}`;
+            clienteRegistroNuevoDiv.style.display = 'none';
+        } else {
+            clienteSeleccionado = null;
+            clienteResultadoEl.className = 'cliente-resultado error';
+            clienteResultadoEl.innerHTML = data.error || 'Cliente no encontrado';
+            // Permite registrar rápidamente al cliente nuevo para poder continuar
+            clienteRegistroNuevoDiv.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('❌ Error al buscar cliente:', error);
+        mostrarAlerta('Error al buscar cliente', 'danger');
+    } finally {
+        btnBuscarCliente.disabled = false;
+        btnBuscarCliente.innerHTML = '<i class="fas fa-search"></i>';
+    }
+}
+
+async function registrarClienteNuevo() {
+    const tipo = tipoComprobanteSelect.value;
+    const numero = numeroDocumentoClienteInput.value.trim();
+    const nombreCompleto = nombreClienteNuevoInput.value.trim();
+    const id_tipo_documento = tipo === '2' ? 2 : 1;
+
+    if (!numero) {
+        mostrarAlerta('Ingrese el número de documento', 'danger');
+        return;
+    }
+    if (!nombreCompleto) {
+        mostrarAlerta('Ingrese el nombre o razón social', 'danger');
+        return;
+    }
+
+    btnRegistrarCliente.disabled = true;
+    btnRegistrarCliente.innerHTML = '<span class="spinner"></span> Registrando...';
+
+    try {
+        const response = await fetch('api/clientes.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'crear',
+                id_tipo_documento,
+                numero_documento: numero,
+                nombres: nombreCompleto
+            })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            clienteSeleccionado = { id_cliente: data.id_cliente, nombre_completo: data.nombre_completo };
+            clienteResultadoEl.className = 'cliente-resultado ok';
+            clienteResultadoEl.innerHTML = `✅ ${data.nombre_completo} (cliente nuevo registrado)`;
+            clienteRegistroNuevoDiv.style.display = 'none';
+        } else {
+            mostrarAlerta(data.error || 'Error al registrar cliente', 'danger');
+        }
+    } catch (error) {
+        console.error('❌ Error al registrar cliente:', error);
+        mostrarAlerta('Error al registrar cliente', 'danger');
+    } finally {
+        btnRegistrarCliente.disabled = false;
+        btnRegistrarCliente.innerHTML = '<i class="fas fa-user-plus"></i> Registrar y usar este cliente';
+    }
+}
+
+// =====================================================
+// ===== PROMOCIONES =====
+// =====================================================
+// Carga las promociones vigentes desde la BD
+async function cargarPromociones() {
+    try {
+        const response = await fetch('api/promociones.php');
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+            promocionesActivas = data;
+            aplicarPromociones();
+            renderCarrito();
+            actualizarTotales();
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar promociones:', error);
+    }
+}
+
+// Recalcula, para cada producto del carrito, si corresponde una promoción
+// vigente según el método de pago seleccionado, y ajusta el precio final.
+function aplicarPromociones() {
+    const metodoPago = parseInt(metodoPagoSelect.value);
+
+    carrito.forEach(item => {
+        const promo = promocionesActivas.find(p =>
+            String(p.codigo_producto) === String(item.codigo) &&
+            (p.id_metodo_pago === null || p.id_metodo_pago === metodoPago)
+        );
+
+        if (promo) {
+            item.precio = Math.max(item.precio_regular - promo.descuento_valor, 0);
+            item.descuento = promo.descuento_valor;
+            item.es_oferta = true;
+            item.nombre_promocion = promo.nombre_promocion;
+        } else {
+            item.precio = item.precio_regular;
+            item.descuento = 0;
+            item.es_oferta = false;
+            item.nombre_promocion = null;
+        }
+    });
+}
+
+// =====================================================
+// ===== AGREGAR AL CARRITO =====
+// =====================================================
+function agregarAlCarrito(producto) {
+    console.log('➕ Agregando al carrito:', producto.descripcion);
+    
+    const existente = carrito.find(item => item.codigo === producto.codigo);
+
+    if (existente) {
+        existente.cantidad++;
+        console.log('📦 Producto ya existe, cantidad:', existente.cantidad);
+    } else {
+        carrito.push({
+            codigo: producto.codigo,
+            descripcion: producto.descripcion,
+            precio: producto.precio,
+            precio_regular: producto.precio_regular || producto.precio,
+            descuento: producto.descuento || 0,
+            es_oferta: producto.es_oferta || false,
+            cantidad: 1
+        });
+        console.log('➕ Nuevo producto agregado');
+    }
+
+    // Recalcula si corresponde alguna promoción vigente para el método de pago actual
+    aplicarPromociones();
+    renderCarrito();
+    actualizarTotales();
+}
+
+// =====================================================
+// ===== RENDER CARRITO =====
+// =====================================================
+function renderCarrito() {
+    if (carrito.length === 0) {
+        cartItems.innerHTML = `
+            <div class="empty-cart">
+                <i class="fas fa-shopping-cart"></i>
+                <p>Carrito vacío</p>
+            </div>
+        `;
+        cartCount.textContent = '0';
+        return;
+    }
+
+    cartItems.innerHTML = carrito.map((item, index) => `
+        <div class="cart-item">
+            <div class="info">
+                <div class="desc">
+                    ${item.descripcion}
+                    ${item.es_oferta ? `<span class="oferta-badge" title="${item.nombre_promocion || 'Oferta'}">OFERTA</span>` : ''}
+                </div>
+                <div class="detail">
+                    ${item.es_oferta ? `<span style="text-decoration:line-through;">S/${item.precio_regular.toFixed(2)}</span> ` : ''}
+                    S/${item.precio.toFixed(2)}
+                    ${item.es_oferta && item.nombre_promocion ? `<span class="promo-tag">${item.nombre_promocion}</span>` : ''}
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick="cambiarCantidad(${index}, -1)">−</button>
+                <span class="qty">${item.cantidad}</span>
+                <button onclick="cambiarCantidad(${index}, 1)">+</button>
+                <span class="price">S/${(item.precio * item.cantidad).toFixed(2)}</span>
+                <button class="remove" onclick="eliminarDelCarrito(${index})">×</button>
+            </div>
+        </div>
+    `).join('');
+
+    cartCount.textContent = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+}
+
+// =====================================================
+// ===== CAMBIAR CANTIDAD =====
+// =====================================================
+function cambiarCantidad(index, delta) {
+    const item = carrito[index];
+    if (!item) return;
+
+    const nuevaCantidad = item.cantidad + delta;
+    if (nuevaCantidad <= 0) {
+        eliminarDelCarrito(index);
+    } else {
+        item.cantidad = nuevaCantidad;
+        renderCarrito();
+        actualizarTotales();
+    }
+}
+
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1);
+    renderCarrito();
+    actualizarTotales();
+}
+
+// =====================================================
+// ===== ACTUALIZAR TOTALES =====
+// =====================================================
+function actualizarTotales() {
+    const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    const igv = subtotal * 0.18;
+    const total = subtotal + igv;
+
+    subtotalEl.textContent = `S/ ${subtotal.toFixed(2)}`;
+    igvTotalEl.textContent = `S/ ${igv.toFixed(2)}`;
+    totalPagarEl.textContent = `S/ ${total.toFixed(2)}`;
+    totalPagarResumen.textContent = `S/ ${total.toFixed(2)}`;
+
+    btnCheckout.innerHTML = `<i class="fas fa-check-circle"></i> Cobrar S/ ${total.toFixed(2)}`;
+    btnCheckout.disabled = carrito.length === 0 || !cajaAbierta;
+}
+
+// =====================================================
+// ===== VERIFICAR SESIÓN =====
+// =====================================================
+// En pos.html - Función verificarSesion()
+
+async function verificarSesion() {
+    console.log('🔍 Verificando sesión...');
+    try {
+        const response = await fetch('api/auth.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify' })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            userData = data.user;
+            userNombre.textContent = '👤 ' + data.user.nombre;
+            console.log('✅ Sesión verificada:', userData.nombre);
+            cargarResumenDia();
+            cargarEstadoCaja();
+            cargarPromociones();
+            actualizarSeccionCliente();
+        } else {
+            console.log('❌ Sin sesión, redirigiendo...');
+            window.location.href = 'login.html';
+        }
+    } catch (error) {
+        console.error('❌ Error verificando sesión:', error);
+        window.location.href = 'login.html';
+    }
+}
+
+// =====================================================
+// ===== LOGOUT =====
+// =====================================================
+// En pos.html - Función logout()
+async function logout() {
+    if (!confirm('¿Estás seguro de cerrar sesión?')) return;
+    try {
+        await fetch('api/auth.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'logout' })
+        });
+    } catch (error) {}
+    sessionStorage.clear();
+    window.location.href = 'login.html';
+}
+
+// =====================================================
+// ===== ESTADO DE CAJA =====
+// =====================================================
+async function cargarEstadoCaja() {
+    try {
+        const response = await fetch('api/caja.php');
+        const data = await response.json();
+        console.log('📦 Estado de caja:', data);
+
+        if (data.estado === 'Abierto') {
+            cajaAbierta = true;
+            cajaId = data.caja_id;
+            cajaStatus.textContent = '💰 Caja Abierta';
+            cajaStatus.className = 'badge-caja abierta';
+            document.getElementById('btnAbrirCaja').style.display = 'none';
+            document.getElementById('btnCerrarCaja').style.display = 'inline-block';
+        } else {
+            cajaAbierta = false;
+            cajaId = null;
+            cajaStatus.textContent = '🔒 Caja Cerrada';
+            cajaStatus.className = 'badge-caja cerrada';
+            document.getElementById('btnAbrirCaja').style.display = 'inline-block';
+            document.getElementById('btnCerrarCaja').style.display = 'none';
+        }
+        actualizarTotales();
+    } catch (error) {
+        console.error('❌ Error al cargar caja:', error);
+    }
+}
+
+// =====================================================
+// ===== ABRIR CAJA (CORREGIDO) =====
+// =====================================================
+function abrirCaja() {
+    const monto = parseFloat(document.getElementById('montoCaja').value) || 0;
+
+    if (monto < 0) {
+        mostrarAlerta('El monto no puede ser negativo', 'danger');
+        return;
+    }
+
+    const btn = document.querySelector('#modalCajaBody .btn-primary');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Abriendo...';
+
+    fetch('api/caja.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'abrir', monto_inicial: monto })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            cajaAbierta = true;
+            cajaId = data.caja_id;
+            document.getElementById('modalCaja').classList.remove('show');
+            cajaStatus.textContent = '💰 Caja Abierta';
+            cajaStatus.className = 'badge-caja abierta';
+            document.getElementById('btnAbrirCaja').style.display = 'none';
+            document.getElementById('btnCerrarCaja').style.display = 'inline-block';
+            actualizarTotales();
+            cargarResumenDia(); // refleja el monto de apertura recién ingresado
+            mostrarAlerta('✅ Caja abierta correctamente con S/ ' + monto.toFixed(2), 'success');
+        } else {
+            mostrarAlerta(data.error || 'Error al abrir la caja', 'danger');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cash-register"></i> Abrir Caja';
+    })
+    .catch(error => {
+        mostrarAlerta('Error al abrir la caja', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cash-register"></i> Abrir Caja';
+    });
+}
+
+// =====================================================
+// ===== CERRAR CAJA =====
+// =====================================================
+function cerrarCaja() {
+    if (!confirm('¿Estás seguro de cerrar la caja?')) return;
+
+    const monto = prompt('Ingrese el monto real en caja:');
+    if (monto === null) return;
+
+    const montoReal = parseFloat(monto);
+    if (isNaN(montoReal) || montoReal < 0) {
+        mostrarAlerta('Ingrese un monto válido', 'danger');
+        return;
+    }
+
+    fetch('api/caja.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cerrar', monto_real: montoReal })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            cajaAbierta = false;
+            cajaId = null;
+            cajaStatus.textContent = '🔒 Caja Cerrada';
+            cajaStatus.className = 'badge-caja cerrada';
+            document.getElementById('btnAbrirCaja').style.display = 'inline-block';
+            document.getElementById('btnCerrarCaja').style.display = 'none';
+            actualizarTotales();
+            montoAperturaEl.textContent = 'S/ 0.00';
+            montoCajaActualEl.textContent = 'S/ 0.00';
+
+            const diff = data.diferencia;
+            let msg = '🔒 Caja cerrada';
+            if (diff === 0) msg += ' - Sin diferencias ✅';
+            else if (diff > 0) msg += ` - Sobrante: S/ ${diff.toFixed(2)}`;
+            else msg += ` - Faltante: S/ ${Math.abs(diff).toFixed(2)}`;
+            mostrarAlerta(msg, diff === 0 ? 'success' : 'danger');
+        } else {
+            mostrarAlerta(data.error || 'Error al cerrar la caja', 'danger');
+        }
+    })
+    .catch(error => {
+        mostrarAlerta('Error al cerrar la caja', 'danger');
+    });
+}
+
+// =====================================================
+// ===== PROCESAR VENTA (CORREGIDO) =====
+// =====================================================
+async function procesarVenta() {
+    if (carrito.length === 0) {
+        mostrarAlerta('No hay productos en el carrito', 'danger');
+        return;
+    }
+
+    if (!cajaAbierta) {
+        mostrarAlerta('⚠️ Primero debe abrir la caja', 'danger');
+        return;
+    }
+
+    const tipoComprobante = tipoComprobanteSelect.value;
+
+    // El cliente debe estar resuelto: encontrado en la BD, registrado como
+    // nuevo, o "Sin documento" (que ya deja clienteSeleccionado = Público General)
+    if (!clienteSeleccionado) {
+        if (tipoComprobante === '2') {
+            mostrarAlerta('⚠️ Debe buscar y confirmar el RUC de la empresa antes de facturar', 'danger');
+        } else {
+            mostrarAlerta('⚠️ Debe buscar el DNI del cliente o elegir "Sin documento"', 'danger');
+        }
+        return;
+    }
+
+    const total = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0) * 1.18;
+
+    if (!confirm(`¿Confirmar venta por S/ ${total.toFixed(2)}?`)) {
+        return;
+    }
+
+    btnCheckout.disabled = true;
+    btnCheckout.innerHTML = '<span class="spinner"></span> Procesando...';
+
+    try {
+        const response = await fetch('api/ventas.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'procesar',
+                productos: carrito,
+                metodo_pago: metodoPagoSelect.value,
+                tipo_comprobante: tipoComprobante,
+                id_cliente: clienteSeleccionado.id_cliente
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            ultimaVentaId = data.venta_id;
+
+            document.getElementById('ventaInfo').innerHTML = `
+                <p><strong>Comprobante:</strong> ${data.serie}-${String(data.correlativo).padStart(4, '0')}</p>
+                <p><strong>Total:</strong> S/ ${data.total.toFixed(2)}</p>
+                <p><strong>Subtotal:</strong> S/ ${data.subtotal.toFixed(2)}</p>
+                <p><strong>IGV:</strong> S/ ${data.igv.toFixed(2)}</p>
+                <p style="color:#999;font-size:12px;">${data.fecha}</p>
+            `;
+            document.getElementById('modalVenta').classList.add('show');
+
+            // Aumenta de inmediato el monto en caja mostrado en la barra superior
+            // (luego cargarResumenDia() confirma el valor real desde el servidor)
+            const actual = parseFloat(montoCajaActualEl.textContent.replace('S/', '').trim()) || 0;
+            montoCajaActualEl.textContent = 'S/ ' + (actual + data.total).toFixed(2);
+
+            carrito = [];
+            renderCarrito();
+            actualizarTotales();
+            cargarResumenDia();
+
+            // Reiniciar identificación de cliente para la siguiente venta
+            actualizarSeccionCliente();
+        } else {
+            mostrarAlerta(data.error || 'Error al procesar la venta', 'danger');
+        }
+    } catch (error) {
+        mostrarAlerta('Error al procesar la venta', 'danger');
+    } finally {
+        btnCheckout.disabled = false;
+        actualizarTotales();
+    }
+}
+
+// =====================================================
+// ===== RESUMEN DEL DÍA =====
+// =====================================================
+async function cargarResumenDia() {
+    try {
+        const response = await fetch('api/reportes.php?action=resumen_dia');
+        const data = await response.json();
+        document.getElementById('ventasHoy').textContent = data.total_ventas || 0;
+        document.getElementById('totalHoy').textContent = 'S/ ' + (data.total_monto || 0).toFixed(2);
+        montoAperturaEl.textContent = 'S/ ' + (data.monto_apertura || 0).toFixed(2);
+        montoCajaActualEl.textContent = 'S/ ' + (data.monto_caja_actual || 0).toFixed(2);
+    } catch (error) {
+        console.error('❌ Error al cargar resumen:', error);
+    }
+}
+
+// =====================================================
+// ===== REPORTES =====
+// =====================================================
+function switchTab(tab) {
+    document.querySelectorAll('.tab-reportes button').forEach(b => b.classList.remove('active'));
+    if (tab === 'venta') {
+        document.getElementById('tabVenta').style.display = 'block';
+        document.getElementById('tabReporte').style.display = 'none';
+        document.querySelector('.tab-reportes button:first-child').classList.add('active');
+    } else {
+        document.getElementById('tabVenta').style.display = 'none';
+        document.getElementById('tabReporte').style.display = 'block';
+        document.querySelector('.tab-reportes button:last-child').classList.add('active');
+        cargarReporte('dia');
+    }
+}
+
+async function cargarReporte(tipo) {
+    let fechaInicio, fechaFin;
+    const hoy = new Date();
+
+    if (tipo === 'dia') {
+        fechaInicio = hoy.toISOString().split('T')[0];
+        fechaFin = hoy.toISOString().split('T')[0];
+    } else if (tipo === 'semana') {
+        const inicio = new Date(hoy);
+        inicio.setDate(hoy.getDate() - 7);
+        fechaInicio = inicio.toISOString().split('T')[0];
+        fechaFin = hoy.toISOString().split('T')[0];
+    } else if (tipo === 'mes') {
+        const inicio = new Date(hoy);
+        inicio.setMonth(hoy.getMonth() - 1);
+        fechaInicio = inicio.toISOString().split('T')[0];
+        fechaFin = hoy.toISOString().split('T')[0];
+    }
+
+    try {
+        const response = await fetch(`api/reportes.php?action=ventas_periodo&fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`);
+        const ventas = await response.json();
+
+        if (ventas.length === 0) {
+            document.getElementById('reporteContent').innerHTML = `
+                <p style="color:#999;text-align:center;padding:20px;">No hay ventas en este período</p>
+            `;
+            return;
+        }
+
+        let total = 0;
+        let html = '<div style="font-weight:600;padding:10px;background:#f0f2f5;border-radius:8px;margin-bottom:10px;">';
+
+        ventas.forEach((v) => {
+            total += parseFloat(v.total_pagar);
+            html += `
+                <div class="reporte-item" onclick="verDetalleVenta(${v.id_venta})">
+                    <div style="display:flex;justify-content:space-between;">
+                        <span><strong>${v.serie_comprobante}-${String(v.correlativo).padStart(4, '0')}</strong></span>
+                        <span style="color:#cc0000;font-weight:600;">S/ ${parseFloat(v.total_pagar).toFixed(2)}</span>
+                    </div>
+                    <div style="font-size:12px;color:#6c757d;">
+                        ${v.cliente_nombre || 'Público General'} • ${v.metodo_pago || 'N/A'} • ${new Date(v.fecha_emision).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+            </div>
+            <div style="background:#cc0000;color:white;padding:12px;border-radius:8px;text-align:center;font-weight:700;">
+                Total: S/ ${total.toFixed(2)}
+            </div>
+        `;
+
+        document.getElementById('reporteContent').innerHTML = html;
+    } catch (error) {
+        document.getElementById('reporteContent').innerHTML = `
+            <p style="color:#dc3545;text-align:center;padding:20px;">Error al cargar reporte</p>
+        `;
+    }
+}
+
+async function verDetalleVenta(ventaId) {
+    try {
+        // Antes se pedía siempre la última venta ("action=ultima"); ahora se
+        // pide la venta puntual que el cajero seleccionó del historial.
+        const response = await fetch(`api/ventas.php?action=detalle&venta_id=${ventaId}`);
+        const data = await response.json();
+
+        if (data.venta) {
+            const nombreCliente = obtenerNombreClienteParaMostrar(data.venta);
+
+            let html = `
+                <div style="padding:10px;">
+                    <p><strong>Comprobante:</strong> ${data.venta.nombre_comprobante || 'Boleta'} ${data.venta.serie_comprobante}-${String(data.venta.correlativo).padStart(4, '0')}</p>
+                    <p><strong>Fecha:</strong> ${new Date(data.venta.fecha_emision).toLocaleString()}</p>
+                    ${nombreCliente ? `<p><strong>Cliente:</strong> ${nombreCliente}</p>` : ''}
+                    <p><strong>Método Pago:</strong> ${data.venta.metodo_pago || 'N/A'}</p>
+                    <hr>
+                    <p><strong>Productos:</strong></p>
+            `;
+
+            data.detalles.forEach(d => {
+                const precioFinal = parseFloat(d.precio_unitario_historico) - parseFloat(d.descuento_aplicado || 0);
+                html += `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;font-size:14px;">
+                    <span>${d.descripcion} x ${d.cantidad}</span>
+                    <span>S/ ${(precioFinal * parseInt(d.cantidad)).toFixed(2)}</span>
+                </div>`;
+            });
+
+            html += `
+                    <hr>
+                    <div style="display:flex;justify-content:space-between;padding:2px 0;font-size:13px;color:#6c757d;">
+                        <span>Subtotal</span><span>S/ ${parseFloat(data.venta.subtotal).toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:2px 0 8px;font-size:13px;color:#6c757d;">
+                        <span>IGV (18%)</span><span>S/ ${parseFloat(data.venta.igv).toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-weight:700;">
+                        <span>Total</span>
+                        <span style="color:#cc0000;">S/ ${parseFloat(data.venta.total_pagar).toFixed(2)}</span>
+                    </div>
+                    <button class="btn-primary" style="margin-top:15px;" onclick="generarComprobantePDF(${ventaId})">
+                        <i class="fas fa-file-pdf"></i> Imprimir PDF
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('modalDetalleBody').innerHTML = html;
+            document.getElementById('modalDetalle').classList.add('show');
+        } else {
+            mostrarAlerta(data.error || 'No se pudo cargar la venta', 'danger');
+        }
+    } catch (error) {
+        mostrarAlerta('Error al cargar detalle', 'danger');
+    }
+}
+
+// =====================================================
+// ===== IMPRIMIR COMPROBANTE EN PDF =====
+// =====================================================
+// Determina el nombre a mostrar según el tipo de comprobante y el tipo de
+// documento del cliente: sin nombre si fue "Sin documento", razón social
+// si es Factura/empresa, o nombre completo si es Boleta con DNI.
+function obtenerNombreClienteParaMostrar(venta) {
+    const esFactura = parseInt(venta.id_tipo_comprobante) === 2;
+    const tipoDocCliente = venta.cliente_id_tipo_documento !== null ? parseInt(venta.cliente_id_tipo_documento) : null;
+
+    if (esFactura) {
+        const razonSocial = `${venta.cliente_nombres || ''} ${venta.cliente_apellido_paterno || ''}`.trim();
+        return razonSocial ? `${razonSocial} (RUC: ${venta.cliente_numero_documento || 'N/D'})` : '';
+    }
+
+    if (tipoDocCliente === 3 || tipoDocCliente === null) {
+        // Sin documento: no se muestra ningún nombre
+        return '';
+    }
+
+    const nombreCompleto = `${venta.cliente_nombres || ''} ${venta.cliente_apellido_paterno || ''} ${venta.cliente_apellido_materno || ''}`.replace(/\s+/g, ' ').trim();
+    return nombreCompleto ? `${nombreCompleto} (DNI: ${venta.cliente_numero_documento || 'N/D'})` : '';
+}
+
+async function generarComprobantePDF(ventaId) {
+    if (!ventaId) {
+        mostrarAlerta('No hay comprobante para imprimir', 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`api/ventas.php?action=detalle&venta_id=${ventaId}`);
+        const data = await response.json();
+
+        if (data.error || !data.venta) {
+            mostrarAlerta(data.error || 'No se pudo obtener el comprobante', 'danger');
+            return;
+        }
+
+        const venta = data.venta;
+        const detalles = data.detalles;
+        const nombreComprobante = venta.nombre_comprobante || (parseInt(venta.id_tipo_comprobante) === 2 ? 'FACTURA' : 'BOLETA DE VENTA');
+        const nombreCliente = obtenerNombreClienteParaMostrar(venta);
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: [80, 200] }); // formato ticket 80mm
+        const centro = 40;
+        let y = 8;
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text('PLAZA VEA', centro, y, { align: 'center' });
+        y += 6;
+
+        doc.setFontSize(10);
+        doc.text(nombreComprobante.toUpperCase(), centro, y, { align: 'center' });
+        y += 5;
+        doc.text(`${venta.serie_comprobante}-${String(venta.correlativo).padStart(4, '0')}`, centro, y, { align: 'center' });
+        y += 6;
+
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        doc.text(`Fecha: ${new Date(venta.fecha_emision).toLocaleString()}`, 5, y);
+        y += 4;
+
+        if (nombreCliente) {
+            const etiqueta = parseInt(venta.id_tipo_comprobante) === 2 ? 'Razón Social' : 'Cliente';
+            const lineasCliente = doc.splitTextToSize(`${etiqueta}: ${nombreCliente}`, 70);
+            doc.text(lineasCliente, 5, y);
+            y += lineasCliente.length * 4;
+        } else {
+            doc.text('Cliente: Público General', 5, y);
+            y += 4;
+        }
+
+        doc.text(`Método de pago: ${venta.metodo_pago || 'N/A'}`, 5, y);
+        y += 5;
+
+        doc.line(5, y, 75, y);
+        y += 4;
+        doc.setFont(undefined, 'bold');
+        doc.text('Producto', 5, y);
+        doc.text('Cant', 50, y);
+        doc.text('Total', 62, y);
+        doc.setFont(undefined, 'normal');
+        y += 3;
+        doc.line(5, y, 75, y);
+        y += 4;
+
+        detalles.forEach(d => {
+            const nombreLineas = doc.splitTextToSize(d.descripcion, 42);
+            const precioFinal = parseFloat(d.precio_unitario_historico) - parseFloat(d.descuento_aplicado || 0);
+            const totalItem = precioFinal * parseInt(d.cantidad);
+
+            doc.text(nombreLineas, 5, y);
+            doc.text(String(d.cantidad), 50, y);
+            doc.text('S/ ' + totalItem.toFixed(2), 62, y);
+            y += nombreLineas.length * 4;
+
+            if (parseFloat(d.descuento_aplicado) > 0) {
+                doc.setFontSize(7);
+                doc.text(`(dscto. S/ ${parseFloat(d.descuento_aplicado).toFixed(2)} c/u)`, 5, y);
+                doc.setFontSize(8);
+                y += 3.5;
+            }
+        });
+
+        y += 2;
+        doc.line(5, y, 75, y);
+        y += 5;
+
+        doc.text('Subtotal:', 5, y);
+        doc.text('S/ ' + parseFloat(venta.subtotal).toFixed(2), 62, y);
+        y += 4.5;
+        doc.text('IGV (18%):', 5, y);
+        doc.text('S/ ' + parseFloat(venta.igv).toFixed(2), 62, y);
+        y += 5.5;
+
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(10);
+        doc.text('TOTAL:', 5, y);
+        doc.text('S/ ' + parseFloat(venta.total_pagar).toFixed(2), 62, y);
+        y += 8;
+
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(7);
+        doc.text('¡Gracias por su compra!', centro, y, { align: 'center' });
+
+        doc.save(`${venta.serie_comprobante}-${String(venta.correlativo).padStart(4, '0')}.pdf`);
+    } catch (error) {
+        console.error('❌ Error al generar PDF:', error);
+        mostrarAlerta('Error al generar el PDF', 'danger');
+    }
+}
+
+// =====================================================
+// ===== ALERTAS =====
+// =====================================================
+function mostrarAlerta(mensaje, tipo = 'danger') {
+    alertMessage.textContent = mensaje;
+    alertMessage.className = `alert alert-${tipo}`;
+    alertMessage.style.display = 'block';
+
+    setTimeout(() => {
+        alertMessage.style.display = 'none';
+    }, 4000);
+}
+
+// =====================================================
+// ===== EVENT LISTENERS =====
+// =====================================================
+btnBuscar.addEventListener('click', function() {
+    buscarProducto(codigoInput.value.trim());
+});
+
+codigoInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        buscarProducto(codigoInput.value.trim());
+    }
+});
+
+descInput.addEventListener('input', function(e) {
+    buscarPorDescripcion(e.target.value.trim());
+});
+
+btnCheckout.addEventListener('click', procesarVenta);
+
+document.getElementById('btnAbrirCaja').addEventListener('click', function() {
+    document.getElementById('modalCaja').classList.add('show');
+    document.getElementById('montoCaja').focus();
+});
+
+document.getElementById('btnCerrarCaja').addEventListener('click', cerrarCaja);
+
+// ===== Identificación de cliente (DNI / RUC / Sin documento) =====
+tipoComprobanteSelect.addEventListener('change', actualizarSeccionCliente);
+boletaModoDocSelect.addEventListener('change', actualizarSeccionCliente);
+btnBuscarCliente.addEventListener('click', buscarCliente);
+btnRegistrarCliente.addEventListener('click', registrarClienteNuevo);
+numeroDocumentoClienteInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        buscarCliente();
+    }
+});
+
+// Genera un pitido electrónico corto y agudo (tipo escáner POS)
+function reproducirSonidoEscaneo() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine'; // Onda senoidal pura
+        oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime); // Frecuencia alta (1100 Hz)
+        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime); // Volumen moderado (12%)
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        // Detiene el sonido tras 0.08 segundos (80 milisegundos) para que sea un "clic" rápido
+        oscillator.stop(audioCtx.currentTime + 0.08); 
+    } catch (e) {
+        console.error("El navegador bloqueó el audio temporalmente:", e);
+    }
+}
+
+// ===== Promociones: recalcular precios al cambiar el método de pago =====
+metodoPagoSelect.addEventListener('change', function() {
+    aplicarPromociones();
+    renderCarrito();
+    actualizarTotales();
+});
+
+// ===== Imprimir comprobante en PDF =====
+document.getElementById('btnImprimirPDF').addEventListener('click', function() {
+    generarComprobantePDF(ultimaVentaId);
+});
+
+// Cerrar modales con click fuera
+document.querySelectorAll('.modal').forEach(function(modal) {
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+        }
+    });
+});
+
+// =====================================================
+// ===== INICIALIZAR =====
+// =====================================================
+console.log('🚀 POS iniciando...');
+verificarSesion();
+actualizarTotales();
+
+setInterval(cargarResumenDia, 30000);
+setInterval(cargarPromociones, 60000);
+</script>
+</body>
+</html>
