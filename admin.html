@@ -393,6 +393,9 @@ async function registrarCajero(e) {
 // =====================================================
 // ===== LOGS DE AUDITORÍA: INGRESO Y SALIDA (VISTA 2) =====
 // =====================================================
+// =====================================================
+// ===== LOGS DE AUDITORÍA: INGRESO Y SALIDA (OPTIMIZADO) =====
+// =====================================================
 async function cargarLogsAuditoria() {
     const tbody = document.getElementById('listaLogsBody');
     const fecha = document.getElementById('filtroFecha').value;
@@ -407,7 +410,6 @@ async function cargarLogsAuditoria() {
         </tr>`;
 
     try {
-        // Consulta unificada de logs de acceso (logs de login y logs_salida)
         const url = `api/reportes.php?action=logs_auditoria&fecha=${fecha}&evento=${evento}&buscar=${encodeURIComponent(busqueda)}`;
         const response = await fetch(url);
         const logs = await response.json();
@@ -424,6 +426,18 @@ async function cargarLogsAuditoria() {
 
         tbody.innerHTML = logs.map(l => {
             const esIngreso = l.tipo_evento.toUpperCase() === 'INGRESO';
+            
+            // FORMATEADOR SEGURO: Evita que JavaScript altere las horas por la zona horaria (UTC-5)
+            let fechaFormateada = l.fecha_evento;
+            if (l.fecha_evento) {
+                const partes = l.fecha_evento.split(' '); // Separa fecha de hora
+                if (partes.length === 2) {
+                    const f = partes[0].split('-'); // [Año, Mes, Día]
+                    const h = partes[1];           // HH:MM:SS
+                    fechaFormateada = `${f[2]}/${f[1]}/${f[0]} ${h}`; // Formato Latino: DD/MM/YYYY HH:MM:SS
+                }
+            }
+
             return `
                 <tr>
                     <td><code>#${l.id_log}</code></td>
@@ -433,8 +447,8 @@ async function cargarLogsAuditoria() {
                             ${esIngreso ? '<i class="fas fa-door-open"></i> INGRESO' : '<i class="fas fa-door-closed"></i> SALIDA'}
                         </span>
                     </td>
-                    <td><i class="fas fa-user-clock" style="color:#ff6b00;"></i> ${l.id_turno}</td>
-                    <td>${new Date(l.fecha_evento).toLocaleString('es-PE')}</td>
+                    <td><i class="fas fa-user-clock" style="color:#ff6b00;"></i> Turno ${l.id_turno}</td>
+                    <td><strong>${fechaFormateada}</strong></td>
                 </tr>
             `;
         }).join('');
