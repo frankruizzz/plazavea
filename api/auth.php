@@ -6,6 +6,9 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Configura la cookie de sesión para que sea válida en todo el servidor local
+require_once 'db.php'; 
+
+// 2. CONFIGURAMOS LAS COOKIES DE SESIÓN PARA EL DOMINIO LOCAL
 session_set_cookie_params([
     'path' => '/',
     'samesite' => 'Lax'
