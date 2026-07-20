@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plaza Vea - Acceso Administrativo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .login-card { background: white; width: 100%; max-width: 400px; padding: 35px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .login-card img { height: 45px; margin-bottom: 20px; }
+        .login-card h2 { font-size: 20px; color: #333; margin-bottom: 5px; font-weight: 600; }
+        .login-card p { font-size: 13px; color: #777; margin-bottom: 25px; }
+        .form-group { margin-bottom: 18px; text-align: left; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 13px; color: #444; }
+        .form-group .input-wrapper { position: relative; }
+        .form-group .input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
+        .form-group input { width: 100%; padding: 12px 15px 12px 42px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; transition: border-color 0.2s; }
+        .form-group input:focus { border-color: #cc0000; outline: none; }
+        .btn-login { width: 100%; padding: 14px; background: #cc0000; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
+        .btn-login:hover { background: #a30000; }
+        .alert { padding: 12px; border-radius: 8px; margin-bottom: 15px; display: none; font-size: 13px; text-align: left; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.6s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <img src="https://i.ibb.co/MDz7myYK/Plaza-Vea-nuevo-logo-svg.jpg" alt="Plaza Vea">
+    <h2>Módulo de Auditoría</h2>
+    <p>Ingrese sus credenciales de Administrador</p>
+
+    <!-- Alerta de Error -->
+    <div id="errorMessage" class="alert"></div>
+
+    <form id="formAdminLogin" onsubmit="procesarLoginAdmin(event)">
+        <div class="form-group">
+            <label>Usuario Administrador</label>
+            <div class="input-wrapper">
+                <i class="fas fa-user-shield"></i>
+                <input type="text" id="adminUser" placeholder="Ej. admin" required autofocus>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Contraseña</label>
+            <div class="input-wrapper">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="adminPass" placeholder="••••••••" required>
+            </div>
+        </div>
+        <button type="submit" class="btn-login" id="btnLoginSubmit">
+            <i class="fas fa-sign-in-alt"></i> Acceder al Panel
+        </button>
+    </form>
+</div>
+
+<script>
+async function procesarLoginAdmin(e) {
+    e.preventDefault();
+    
+    const alertEl = document.getElementById('errorMessage');
+    const btn = document.getElementById('btnLoginSubmit');
+    const usuario = document.getElementById('adminUser').value.trim();
+    const clave = document.getElementById('adminPass').value;
+
+    alertEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Validando credenciales...';
+
+    try {
+        const response = await fetch('api/auth_admin.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'login', usuario, clave })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            window.location.href = 'admin.html';
+        } else {
+            alertEl.textContent = data.error || 'Error de autenticación';
+            alertEl.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Acceder al Panel';
+        }
+    } catch (error) {
+        alertEl.textContent = 'Error de red. No se pudo conectar con el servidor.';
+        alertEl.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Acceder al Panel';
+    }
+}
+</script>
+</body>
+</html>
